@@ -28,7 +28,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      
+
       background-image:
           url("assets/backgroundgame.png");
       background-size: cover;
@@ -81,7 +81,7 @@
     .back-button:hover {
       color: #ba9972;
     }
-    
+
     .eyebrow {
       color: var(--paper);
       font-size: 10px;
@@ -98,8 +98,8 @@
     }
 
     h1 span { color: var(--coral); }
-    
-    
+
+
     .brand-mark {
       display: flex;
       gap: 12px;
@@ -169,14 +169,14 @@
     #pontos { color: var(--paper); }
     #onda { color: var(--amber); }
 
-    .vida { display: flex; gap: 8px; height: 26px; align-items: center; }
-    .lives {
+    .vidas { display: flex; gap: 8px; height: 26px; align-items: center; }
+    .vidas {
       width: 22px; height: 17px; position: relative;
       clip-path: polygon(50% 0, 100% 100%, 50% 72%, 0 100%);
       background: var(--cyan);
       filter: drop-shadow(0 0 5px rgba(116,224,208,.55));
     }
-    .lives.perca { background: var(--line); filter: none; }
+    .vidas.perca { background: var(--line); filter: none; }
 
     .sidebar-bottom { margin-top: auto; }
     .mission-status {
@@ -307,7 +307,7 @@
 
 
 
-  
+
 <body>
   <main class="shell">
     <header>
@@ -320,7 +320,7 @@
     <section class="game-layout" aria-label="Jogo Galactic Raid">
       <aside class="sidebar">
         <div class="sidebar-top">
-          
+
           <a href="index.html" class="back-button">
             VOLTAR AO MENU
           </a>
@@ -336,8 +336,12 @@
             <span class="stat-value" id="onda">01</span>
           </div>
           <div class="stat">
-            <span class="stat-label"></span>
-            <div class="vidas" id="lives"></div>
+            <span class="stat-label">jogador 1</span>
+            <div class="vidas" id="livesP1"></div>
+          </div>
+          <div class="stat" id="player2Hud">
+            <span class="stat-label">jogador 2</span>
+            <div class="vidas" id="livesP2"></div>
           </div>
         </div>
         <div class="sidebar-bottom">
@@ -403,10 +407,20 @@
     /*Imagem do inimgo*/
     const inimigoImage = new Image();
     inimigoImage.src = "assets/inimigo1.png";
+
+    const inimigo2Image = new Image();
+    inimigo2Image.src = "assets/inimigo2.png";
+
+    const inimigo3Image = new Image();
+    inimigo3Image.src = "assets/inimigo3.png";
+
+    
     /*Imagem do jogador*/
     const playerImage = new Image();
     playerImage.src = "assets/player.png";
-    
+    const player2Image = new Image();
+    player2Image.src = "assets/player2.png";
+
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const overlay = document.getElementById("overlay");
@@ -420,10 +434,19 @@
     const livesEl = document.getElementById("lives");
     const statusTitle = document.getElementById("statusTitle");
     const statusText = document.getElementById("statusText");
-
+    const player2Hud = document.getElementById("player2Hud");
+    if (player2Hud) {
+      player2Hud.hidden = selectedMode !== "dupla";
+    }
+    if (selectedMode === "dupla") {
+      document.querySelector(".instructions").innerHTML = `
+        <kbd>WASD</kbd> P1 mover / espaço atirar<br>
+        <kbd>SETAS</kbd> P2 mover / enter atirar
+      `;
+    }
     let W = 800, H = 540, dpr = 1, last = 0, raf;
     let mode = "pronto", score = 0, wave = 1, lives = 3;
-    let player, bullets, enemyBullets, enemies, particles, stars;
+    let players = [], bullets, enemyBullets, enemies, particles, stars;
     let keys = {}, formationDirection = 1, formationTimer = 0, fireTimer = 0;
     let pointerX = null, pointerY = null, shake = 0;
 
@@ -435,7 +458,9 @@
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (player) player.y = H - 52;
+      players.forEach(player => {
+        player.y = H - 52;
+      });
     }
     window.addEventListener("resize", resize);
 
@@ -447,9 +472,11 @@
       }));
     }
 
+
+
     function resetGame() {
-      score = 0; wave = 1; lives = currentMode.lives; formationDirection = 1;
-      player = { x: W / 2, y: H - 52, w: 28, h: 25, cooldown: 0, invincible: 0 };
+      score = 0; wave = 1; formationDirection = 1;
+      createPlayers();
       bullets = []; enemyBullets = []; particles = [];
       statusTitle.textContent = currentMode.name;
       statusText.innerHTML =
@@ -457,6 +484,60 @@
       makeStars(); createWave();
       updateHud();
     }
+
+
+
+    function createPlayers() {
+      players = [
+        {
+          id: 1,
+          x: W * 0.35,
+          y: H - 52,
+          w: 28,
+          h: 25,
+          lives: currentMode.lives,
+          cooldown: 0,
+          invincible: 0,
+          alive: true,
+          controls: {
+            left: "KeyA",
+            right: "KeyD",
+            up: "KeyW",
+            down: "KeyS",
+            fire: "Space"
+          }
+        }
+      ];
+      if (selectedMode === "dupla") {
+        players.push({
+          id: 2,
+          x: W * 0.65,
+          y: H - 52,
+          w: 28,
+          h: 25,
+          lives: currentMode.lives,
+          cooldown: 0,
+          invincible: 0,
+          alive: true,
+          controls: {
+            left: "ArrowLeft",
+            right: "ArrowRight",
+            up: "ArrowUp",
+            down: "ArrowDown",
+            fire: "Enter"
+          }
+        });
+      }
+    }
+
+
+
+
+
+
+
+
+
 
     function createWave() {
       enemies = [];
@@ -482,12 +563,17 @@
     function updateHud() {
       scoreEl.textContent = String(score).padStart(6, "0");
       waveEl.textContent = String(wave).padStart(2, "0");
-      livesEl.innerHTML = "";
-      for (let i = 0; i < 3; i++) {
-        const life = document.createElement("i");
-        life.className = "vidas" + (i >= lives ? "perca" : "");
-        livesEl.appendChild(life);
-      }
+      players.forEach(player => {
+        const element = document.getElementById(`livesP${player.id}`);
+        if (!element) return;
+        element.innerHTML = "";
+        for (let i = 0; i < currentMode.lives; i++) {
+          const life = document.createElement("i");
+          life.className =
+            "vidas" + (i >= player.lives ? " perca" : "");
+          element.appendChild(life);
+        }
+      });
     }
 
     function begin() {
@@ -522,10 +608,22 @@
       }
     }
 
-    function shoot() {
-      if (mode !== "playing" || player.cooldown > 0) return;
-      bullets.push({x: player.x, y: player.y - 30, speed: 470, life: 1});
-      player.cooldown = .19;
+    function shoot(player) {
+      if (
+        mode !== "playing" ||
+        !player.alive ||
+        player.cooldown > 0
+      ) {
+        return;
+      }
+      bullets.push({
+        ownerId: player.id,
+        x: player.x,
+        y: player.y - 30,
+        speed: 470,
+        life: 1
+      });
+      player.cooldown = 0.19;
     }
 
     function enemyShoot() {
@@ -542,16 +640,21 @@
       }
     }
 
-    function hitPlayer() {
-      if (player.invincible > 0) return;
-      lives--;
+    function hitPlayer(player) {
+      if (!player || !player.alive || player.invincible > 0) return;
+      player.lives--;
       player.invincible = 2;
-      player.x = W / 2;
+      player.x = player.id === 1 ? W * 0.35 : W * 0.65;
+      player.y = H - 52;
       addBurst(player.x, player.y, "#74e0d0", 20);
       shake = 10;
       updateHud();
-      
-      if (lives <= 0) {
+
+      if (player.lives <= 0) {
+        player.alive = false;
+      }
+
+      if (players.every(player => !player.alive)) {
         mode = "over";
         setOverlay("Os nazi avançaram", "FIM DE JOGO", `Pontuação final: <b>${String(score).padStart(6, "0")}</b><br>O planeta ainda precisa de você.`, "TENTAR DENOVO");
         statusTitle.textContent = "NAVE DANIFICADA";
@@ -559,23 +662,25 @@
       }
     }
 
-    function update(dt) {
+    function updatePlayer(player, dt) {
+      if (!player.alive) return;
       const speed = 310;
-      if (keys.ArrowLeft || keys.a) player.x -= speed * dt;
-      if (keys.ArrowRight || keys.d) player.x += speed * dt;
-      if (keys.ArrowUp || keys.w) player.y -= speed * dt;
-      if (keys.ArrowDown || keys.s) player.y += speed * dt;
-      
-      if (pointerX !== null) player.x += (pointerX - player.x) * Math.min(1, dt * 9);
+      const controls = player.controls;
+      if (keys[controls.left]) player.x -= speed * dt;
+      if (keys[controls.right]) player.x += speed * dt;
+      if (keys[controls.up]) player.y -= speed * dt;
+      if (keys[controls.down]) player.y += speed * dt;
       player.x = Math.max(24, Math.min(W - 24, player.x));
+      player.y = Math.max(24, Math.min(H - 24, player.y));
       player.cooldown = Math.max(0, player.cooldown - dt);
       player.invincible = Math.max(0, player.invincible - dt);
+      if (keys[controls.fire]) {
+        shoot(player);
+      }
+    }
 
-      if (pointerY !== null) player.y += (pointerY - player.y) * Math.min(1, dt * 9);
-      player.y = Math.max(24, Math.min(H - 24, player.y));
-
-    
-      if (keys[" "] || keys.Space) shoot();
+    function update(dt) {
+      players.forEach(player => updatePlayer(player, dt));
 
       formationTimer += dt;
       const formationSpeed = (22 + wave * 3.5) * currentMode.enemySpeed;
@@ -605,9 +710,21 @@
         }
       }));
       enemyBullets.forEach(b => {
-        if (Math.abs(b.x - player.x) < 17 && Math.abs(b.y - player.y) < 18) { b.life = 0; hitPlayer(); }
+        for (const player of players) {
+          if (
+            player.alive &&
+            Math.abs(b.x - player.x) < 17 &&
+            Math.abs(b.y - player.y) < 18
+          ) {
+            b.life = 0;
+            hitPlayer(player);
+            break;
+          }
+        }
       });
-      if (enemies.some(e => e.alive && e.y > H - 130)) hitPlayer();
+      if (enemies.some(e => e.alive && e.y > H - 130)) {
+        players.filter(player => player.alive).forEach(hitPlayer);
+      }
 
       particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .98; p.vy *= .98; p.life -= dt * 1.5; });
       particles = particles.filter(p => p.life > 0);
@@ -638,54 +755,67 @@
       for (let y = 24; y < H; y += 52) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
     }
 
-    function drawPlayer() {
+    function drawPlayer(player) {
       if (player.invincible > 0 && Math.floor(player.invincible * 10) % 2 === 0) return;
-      ctx.save(); ctx.translate(player.x, player.y);
-      ctx.shadowBlur = 18; ctx.shadowColor = "#4d8dff";
+      ctx.save(); 
+      ctx.translate(player.x, player.y);
+
+      ctx.shadowBlur = 18; ctx.shadowColor = player.id === 1 ? "#778cff" : "#3dfc03";
       ctx.fillStyle = "#00850d"; ctx.beginPath();
-      if (playerImage.complete && playerImage.naturalWidth > 0) {
-        ctx.shadowBlur = 18;
-        ctx.shadowColor = "#74e0d0";
-        const width = 46;
-        const height = 46;
+
+      const imagem = player.id === 1 ? playerImage : player2Image;
+
+      if (imagem.complete && imagem.naturalWidth > 0) {
         ctx.drawImage(
-          playerImage,
-          -width / 2,
-          -height / 2,
-          width,
-          height
+          imagem,
+          -23,
+          -23,
+          46,
+          46
         );
       }
       ctx.restore();
     }
 
     function drawEnemy(e) {
-      const colors = ["#ff6d67", "#ffb15c", "#a184ff"], color = colors[e.type];
-      ctx.save(); ctx.translate(e.x, e.y); 
-      ctx.shadowBlur = 13; ctx.shadowColor = color; ctx.fillStyle = color;
-      
-       if (inimigoImage.complete && inimigoImage.naturalWidth > 0) {
-          ctx.shadowBlur = 18;
-          ctx.shadowColor = "#ff6d67";
-          const width = 46;
-          const height = 46;
-          ctx.drawImage(
-            inimigoImage,
-            -width / 2,
-            -height / 2,
-            width,
-            height
-          );
+        const colors = ["#ff6d67", "#ffb15c", "#a184ff"];
+        const color = colors[e.type];
+
+        ctx.save();
+        ctx.translate(e.x, e.y);
+
+        ctx.shadowBlur = 13;
+        ctx.shadowColor = color;
+        ctx.fillStyle = color;
+
+        const imagem =
+            e.type === 0 ? inimigoImage :
+            e.type === 1 ? inimigo2Image :
+            e.type === 2 ? inimigo3Image :
+            inimigoImage;
+
+        if (imagem.complete && imagem.naturalWidth > 0) {
+            const width = 46;
+            const height = 46;
+
+            ctx.drawImage(
+                imagem,
+                -width / 2,
+                -height / 2,
+                width,
+                height
+            );
         }
+
         ctx.restore();
-      }
+    }
 
     function draw() {
       ctx.save();
       if (shake) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
       drawBackground();
       enemies.forEach(e => { if (e.alive) drawEnemy(e); });
-      
+
       bullets.forEach(b => {
         ctx.shadowBlur = 13; ctx.shadowColor = "#65cf70"; ctx.fillStyle = "#d9ffdb";
         ctx.fillRect(b.x - 1.5, b.y - 9, 3, 12); ctx.shadowBlur = 0;
@@ -698,7 +828,12 @@
         ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, p.size, p.size);
       });
-      ctx.globalAlpha = 1; drawPlayer(); ctx.restore();
+      ctx.globalAlpha = 1; ctx.restore();
+      players.forEach(player => {
+        if (player.alive) {
+          drawPlayer(player);
+        }
+      });
     }
 
     function loop(time) {
@@ -708,18 +843,20 @@
     }
 
     window.addEventListener("keydown", e => {
-      keys[e.key] = true;
-      if ([" ", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
-      if (e.key.toLowerCase() === "p") togglePause();
+      keys[e.code] = true;
+      if (["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code)) {e.preventDefault();}
+      if (e.code === "KeyP") togglePause();
     });
-    window.addEventListener("keyup", e => { keys[e.key] = false; });
+    window.addEventListener("keyup", e => { keys[e.code] = false; });
     canvas.addEventListener("pointermove", e => {
       const rect = canvas.getBoundingClientRect();
       pointerX = (e.clientX - rect.left) * W / rect.width;
       pointerY = (e.clientY - rect.top) * H / rect.height;
     });
     canvas.addEventListener("pointerleave", () => { pointerX = null; pointerY = null; });
-    canvas.addEventListener("pointerdown", () => { if (mode === "playing") shoot(); });
+     canvas.addEventListener("pointerdown", () => {
+       if (mode === "playing" && players[0]) shoot(players[0]);
+     });
     startBtn.addEventListener("click", () => mode === "paused" ? togglePause() : begin());
     pauseBtn.addEventListener("click", togglePause);
 
