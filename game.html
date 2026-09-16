@@ -733,6 +733,25 @@
       if (!enemies.some(e => e.alive)) {
         wave++;
         score += 500;
+
+        // A cada 5 ondas, revive jogadores mortos no modo dupla
+        if (selectedMode === "dupla" && wave % 5 === 0) {
+          players.forEach(player => {
+            if (!player.alive) {
+              player.alive = true;
+              player.lives = currentMode.lives;
+              player.invincible = 3;
+
+              // Reposiciona o jogador na posição inicial
+              player.x = player.id === 1 ? W * 0.35 : W * 0.65;
+              player.y = H - 52;
+
+              // Efeito visual do renascimento
+              addBurst(player.x, player.y, "#74e0d0", 30);
+            }
+          });
+        }
+
         createWave();
         updateHud();
       }
