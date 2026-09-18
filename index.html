@@ -206,11 +206,17 @@
       function fecharVideo() {
         video.pause();
         introVideo.style.display = "none";
+
+        sessionStorage.setItem("introJaVisto", "true");
       }
 
-      skipButton.addEventListener("click", fecharVideo);
-
-      video.addEventListener("ended", fecharVideo);
+      // Verifica se o vídeo já foi visto nesta sessão
+      if (sessionStorage.getItem("introJaVisto") === "true") {
+        introVideo.style.display = "none";
+      } else {
+        skipButton.addEventListener("click", fecharVideo);
+        video.addEventListener("ended", fecharVideo);
+      }
     </script>
 </body>  
 </html>
