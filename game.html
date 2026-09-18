@@ -37,6 +37,7 @@
       color: var(--paper);
       font-family: "Space Grotesk", sans-serif;
       overflow: hidden;
+  
     }
 
     body::before {
@@ -53,15 +54,19 @@
 
     .shell {
       width: min(1180px, calc(100% - 40px));
+      height: 100vh;
       margin: 0 auto;
-      padding: 36px 0 42px;
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding-bottom: 28px;
+      padding-bottom: 20px;
+      flex-shrink: 0;
     }
 
     .eyebrow, .mono, .stat-label, .control-copy, .hint, .footer-note {
@@ -128,6 +133,9 @@
       grid-template-columns: 226px 1fr;
       gap: 16px;
       align-items: stretch;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .sidebar {
@@ -135,7 +143,7 @@
       border: 1px solid var(--line);
       display: flex;
       flex-direction: column;
-      min-height: 620px;
+      min-height: 0;
       padding: 22px 18px;
     }
 
@@ -214,6 +222,10 @@
       border: 1px solid var(--line);
       box-shadow: 0 24px 80px rgba(0,0,0,.35);
       min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     .game-card::before, .game-card::after {
       content: "";
@@ -225,7 +237,7 @@
     }
     .game-card::before { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
     .game-card::after { right: -1px; bottom: -1px; border-right: 2px solid; border-bottom: 2px solid; }
-    .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1.48; min-height: 450px; }
+    .canvas-wrap { position: relative; width: 100%; aspect-ratio: 1.48; min-height: 0; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
     .overlay {
@@ -414,6 +426,14 @@
     const inimigo3Image = new Image();
     inimigo3Image.src = "assets/inimigo3.png";
 
+    const endgameImage = new Image();
+    endgameImage.src = "assets/endgame.png";
+
+    const boss1Image = new Image();
+    boss1Image.src = "assets/boss1.png";
+
+    const boss2Image = new Image();
+    boss2Image.src = "assets/boss2.png";
     
     /*Imagem do jogador*/
     const playerImage = new Image();
@@ -449,6 +469,8 @@
     let players = [], bullets, enemyBullets, enemies, particles, stars;
     let keys = {}, formationDirection = 1, formationTimer = 0, fireTimer = 0;
     let pointerX = null, pointerY = null, shake = 0;
+    let boss = null;
+    let bossActive = false;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -475,7 +497,13 @@
 
 
     function resetGame() {
-      score = 0; wave = 1; formationDirection = 1;
+      score = 0;
+      wave = 1;
+      formationDirection = 1;
+
+      boss = null;
+      bossActive = false;
+
       createPlayers();
       bullets = []; enemyBullets = []; particles = [];
       statusTitle.textContent = currentMode.name;
@@ -533,11 +561,118 @@
 
 
 
+    //BOSS===================================//
+    function createBoss() {
+        boss = {
+            x: W / 2,
+            y: 100,
+            w: 100,
+            h: 80,
+
+            hp: 20,
+            maxHp: 20,
+
+            form: 1,
+
+            direction: 1,
+            speed: 80,
+
+            shootTimer: 0,
+            alive: true,
+
+            transforming: false,
+            transformTimer: 0
+        };
+    }
+
+    function drawBoss() {
+        if (!boss || !boss.alive) return;
+
+        const imagem = boss.form === 1 ? boss1Image : boss2Image;
+
+        ctx.save();
+        ctx.translate(boss.x, boss.y);
+
+        // Efeito durante a transformação
+        if (boss.transforming) {
+            ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.5;
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = "#a184ff";
+        }
+
+        // Imagem do boss
+        if (imagem.complete && imagem.naturalWidth > 0) {
+            ctx.drawImage(
+                imagem,
+                -boss.w / 2,
+                -boss.h / 2,
+                boss.w,
+                boss.h
+            );
+        }
+
+        ctx.restore();
+
+        // =========================
+        // BARRA DE VIDA DO BOSS
+        // =========================
+
+        const barWidth = 180;
+        const barHeight = 14;
+
+        const barX = boss.x - barWidth / 2;
+        const barY = boss.y - boss.h / 2 - 28;
+
+        const vidaPercentual = boss.hp / boss.maxHp;
+
+        // Fundo da barra
+        ctx.fillStyle = "#241b1b";
+        ctx.fillRect(
+            barX,
+            barY,
+            barWidth,
+            barHeight
+        );
+
+        // Vida restante
+        ctx.fillStyle = boss.form === 1 ? "#ff2e2e" : "#5330a6";
+        ctx.fillRect(
+            barX,
+            barY,
+            barWidth * vidaPercentual,
+            barHeight
+        );
+
+        // Borda
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+            barX,
+            barY,
+            barWidth,
+            barHeight
+        );
+
+        // Texto da vida
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(
+            `${boss.hp} / ${boss.maxHp}`,
+            boss.x,
+            barY - 6
+        );
+    }
+
+   
 
 
 
 
 
+
+
+    //==================================================//
 
     function createWave() {
       enemies = [];
@@ -633,6 +768,64 @@
       enemyBullets.push({x: e.x, y: e.y + 20, speed: 145 + wave * 9, life: 1});
     }
 
+    function bossShoot() {
+      if (!boss || !boss.alive || boss.transforming) return;
+
+      boss.shootTimer -= 1 / 60;
+
+      if (boss.shootTimer > 0) return;
+
+      // Intervalo dos tiros
+      boss.shootTimer = boss.form === 1 ? 0.5 : 0.7;
+
+      // =========================
+      // FORMA 1 - TIRO RETO
+      // =========================
+      if (boss.form === 1) {
+        enemyBullets.push({
+          x: boss.x,
+          y: boss.y + boss.h / 2,
+          speed: 400,
+          life: 1,
+          bossShot: true
+        });
+
+        return;
+      }
+
+      // =========================
+      // FORMA 2 - BOLA DE FOGO
+      // =========================
+
+      const jogadoresVivos = players.filter(player => player.alive);
+
+      if (jogadoresVivos.length === 0) return;
+
+      // Escolhe um jogador vivo como alvo
+      const alvo =
+        jogadoresVivos[Math.floor(Math.random() * jogadoresVivos.length)];
+
+      const dx = alvo.x - boss.x;
+      const dy = alvo.y - boss.y;
+
+      const distancia = Math.hypot(dx, dy);
+
+      const velocidade = 500;
+
+      enemyBullets.push({
+        x: boss.x,
+        y: boss.y + boss.h / 2,
+
+        vx: (dx / distancia) * velocidade,
+        vy: (dy / distancia) * velocidade,
+
+        life: 3,
+
+        bossShot: true,
+        form2: true
+      });
+    }
+
     function addBurst(x, y, color, count = 12) {
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2, speed = Math.random() * 100 + 45;
@@ -681,6 +874,36 @@
 
     function update(dt) {
       players.forEach(player => updatePlayer(player, dt));
+      // Movimento horizontal e transformação do boss
+      if (boss && boss.alive) {
+
+        // Transformação
+        if (boss.transforming) {
+          boss.transformTimer -= dt;
+
+          if (boss.transformTimer <= 0) {
+            boss.transforming = false;
+            boss.form = 2;
+
+            addBurst(boss.x, boss.y, "#a184ff", 40);
+            shake = 12;
+          }
+        } else {
+
+          // Movimento horizontal normal
+          boss.x += boss.direction * boss.speed * dt;
+
+          if (boss.x > W - boss.w / 2) {
+            boss.x = W - boss.w / 2;
+            boss.direction = -1;
+          }
+
+          if (boss.x < boss.w / 2) {
+            boss.x = boss.w / 2;
+            boss.direction = 1;
+          }
+        }
+      }
 
       formationTimer += dt;
       const formationSpeed = (22 + wave * 3.5) * currentMode.enemySpeed;
@@ -694,9 +917,19 @@
       if (left + drift < 32 || right + drift > W - 32) formationDirection *= -1;
       enemies.forEach(e => { if (e.alive) e.baseX += formationDirection * formationSpeed * dt; });
       enemyShoot();
+      bossShoot();
 
       bullets.forEach(b => { b.y -= b.speed * dt; b.life -= dt; });
-      enemyBullets.forEach(b => { b.y += b.speed * dt; b.life -= dt; });
+      enemyBullets.forEach(b => {
+        if (b.form2) {
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+        } else {
+          b.y += b.speed * dt;
+        }
+
+        b.life -= dt;
+      });
       bullets = bullets.filter(b => b.y > -20 && b.life > 0);
       enemyBullets = enemyBullets.filter(b => b.y < H + 20);
 
@@ -709,6 +942,46 @@
           updateHud();
         }
       }));
+
+      // Colisão dos tiros com o boss
+      if (boss && boss.alive) {
+        bullets.forEach(b => {
+          if (b.life <= 0 || boss.transforming) return;
+
+          if (
+            Math.abs(b.x - boss.x) < boss.w / 2 &&
+            Math.abs(b.y - boss.y) < boss.h / 2
+          ) {
+            b.life = 0;
+            boss.hp--;
+
+            addBurst(boss.x, boss.y, "#ffb15c", 8);
+            shake = 4;
+
+            // Transformação ao chegar em 10 HP
+            if (boss.hp === 10 && boss.form === 1) {
+              boss.transforming = true;
+              boss.transformTimer = 2;
+            }
+
+            // Boss derrotado
+            if (boss.hp <= 0) {
+              boss.alive = false;
+              bossActive = false;
+
+              score += 1000;
+
+              addBurst(boss.x, boss.y, "#ff6d67", 40);
+
+              // Boss derrotado: avança para a próxima onda
+              wave++;
+              createWave();
+              updateHud();
+            }
+          }
+        });
+      }
+      
       enemyBullets.forEach(b => {
         for (const player of players) {
           if (
@@ -731,9 +1004,23 @@
       stars.forEach(s => { s.y += s.speed * dt; if (s.y > H) { s.y = -3; s.x = Math.random() * W; } });
 
       if (!enemies.some(e => e.alive)) {
+
+        // Primeiro, na onda 3, cria o boss
+        if (wave === 3 && !bossActive) {
+          bossActive = true;
+          createBoss();
+          return;
+        }
+
+        // Enquanto o boss estiver vivo, não avança de onda
+        if (boss && boss.alive) {
+          return;
+        }
+        
         wave++;
         score += 500;
-
+        
+        boss = null;
         // A cada 5 ondas, revive jogadores mortos no modo dupla
         if (selectedMode === "dupla" && wave % 5 === 0) {
           players.forEach(player => {
@@ -833,15 +1120,38 @@
       ctx.save();
       if (shake) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
       drawBackground();
-      enemies.forEach(e => { if (e.alive) drawEnemy(e); });
+      enemies.forEach(e => {
+          if (e.alive) drawEnemy(e);
+      });
+
+      if (boss && boss.alive) {
+          drawBoss();
+      }
 
       bullets.forEach(b => {
         ctx.shadowBlur = 13; ctx.shadowColor = "#65cf70"; ctx.fillStyle = "#d9ffdb";
         ctx.fillRect(b.x - 1.5, b.y - 9, 3, 12); ctx.shadowBlur = 0;
       });
       enemyBullets.forEach(b => {
-        ctx.shadowBlur = 10; ctx.shadowColor = "#ffbb00"; ctx.fillStyle = "#ffc561";
-        ctx.fillRect(b.x - 2, b.y - 7, 4, 10); ctx.shadowBlur = 0;
+        if (b.form2) {
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = "#fffd84";
+          ctx.fillStyle = "#ff8c00";
+
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, 9, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = "#ffbb00";
+          ctx.fillStyle = "#ffc561";
+
+          ctx.fillRect(b.x - 2, b.y - 7, 4, 10);
+
+          ctx.shadowBlur = 0;
+        }
       });
       particles.forEach(p => {
         ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color;
