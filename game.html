@@ -69,6 +69,55 @@
       flex-shrink: 0;
     }
 
+    .boss-video {
+      position: fixed;
+      inset: 0;
+
+      width: 100vw;
+      height: 100vh;
+
+      background: #000000;
+
+      display: none;
+      justify-content: center;
+      align-items: center;
+
+      z-index: 9999;
+    }
+
+    .boss-video video {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+
+    .boss-video button {
+      position: absolute;
+      right: 25px;
+      bottom: 25px;
+
+      padding: 12px 22px;
+
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+
+      border: 2px solid #ffffff;
+      border-radius: 5px;
+
+      font-size: 16px;
+      font-weight: bold;
+
+      cursor: pointer;
+
+      z-index: 10000;
+    }
+
+    .boss-video button:hover {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    
     .eyebrow, .mono, .stat-label, .control-copy, .hint, .footer-note {
       font-family: "DM Mono", monospace;
       letter-spacing: .1em;
@@ -321,6 +370,13 @@
 
 
 <body>
+  <div class="boss-video" id="bossVideo">
+    <video id="wave4Video" playsinline>
+      <source src="assets/boss.mp4" type="video/mp4">
+    </video>
+
+    <button id="skipWave4Video">PULAR</button>
+  </div>
   <main class="shell">
     <header>
       <div>
@@ -450,6 +506,9 @@
     const startBtn = document.getElementById("startBtn");
     const pauseBtn = document.getElementById("pausaBtn");
     const scoreEl = document.getElementById("pontos");
+    const bossVideo = document.getElementById("bossVideo");
+    const wave4Video = document.getElementById("wave4Video");
+    const skipWave4Video = document.getElementById("skipWave4Video");
     const waveEl = document.getElementById("onda");
     const livesEl = document.getElementById("lives");
     const statusTitle = document.getElementById("statusTitle");
@@ -471,6 +530,7 @@
     let pointerX = null, pointerY = null, shake = 0;
     let boss = null;
     let bossActive = false;
+    let videoTransitionActive = false;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -872,6 +932,48 @@
       }
     }
 
+    function iniciarWave4() {
+      if (!videoTransitionActive) return;
+
+      videoTransitionActive = false;
+
+      bossVideo.style.display = "none";
+
+      wave4Video.pause();
+      wave4Video.currentTime = 0;
+
+      // Remove completamente o boss derrotado
+      boss = null;
+      bossActive = false;
+
+      // Avança para a Onda 4
+      wave = 4;
+
+      createWave();
+      updateHud();
+
+      mode = "playing";
+      last = performance.now();
+
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
+    }
+
+    function mostrarVideoWave4() {
+      if (videoTransitionActive) return;
+
+      videoTransitionActive = true;
+      mode = "video";
+
+      bossVideo.style.display = "flex";
+
+      wave4Video.currentTime = 0;
+      wave4Video.play();
+    }
+    wave4Video.addEventListener("ended", iniciarWave4);
+
+    skipWave4Video.addEventListener("click", iniciarWave4);
+
     function update(dt) {
       players.forEach(player => updatePlayer(player, dt));
       // Movimento horizontal e transformação do boss
@@ -973,10 +1075,13 @@
 
               addBurst(boss.x, boss.y, "#ff6d67", 40);
 
-              // Boss derrotado: avança para a próxima onda
-              wave++;
-              createWave();
-              updateHud();
+              // Impede que a lógica normal avance a onda
+              enemies.forEach(e => e.alive = false);
+
+              // Mostra o vídeo antes da Onda 4
+              mostrarVideoWave4();
+
+              return;
             }
           }
         });
@@ -1002,7 +1107,9 @@
       particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .98; p.vy *= .98; p.life -= dt * 1.5; });
       particles = particles.filter(p => p.life > 0);
       stars.forEach(s => { s.y += s.speed * dt; if (s.y > H) { s.y = -3; s.x = Math.random() * W; } });
-
+      if (videoTransitionActive) {
+        return;
+      }
       if (!enemies.some(e => e.alive)) {
 
         // Primeiro, na onda 3, cria o boss
